@@ -53,7 +53,7 @@ printer which will be used as a dependency at runtime, it just needs
 to declare the dependency and use it (there is an assumed interface,
 as with much in python we just use duck typing).
 
-To wire, these components up at runtime, we would write a yaml file
+To wire these components up at runtime, we would write a yaml file
 that would have something like this:
 
     components:
