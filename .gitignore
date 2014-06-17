@@ -21,3 +21,5 @@ bin
 .buildout
 cover
 
+# Tox
+.tox
