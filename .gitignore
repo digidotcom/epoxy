@@ -3,8 +3,9 @@
 *~
 \#*\#
 
-# Eclipse Files
+# IDE Files
 .*project*
+.idea
 
 # Python
 *.pyc
@@ -23,3 +24,7 @@ cover
 
 # Tox
 .tox
+
+# Virtualenv
+.env
+env
