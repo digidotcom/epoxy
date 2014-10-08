@@ -69,7 +69,7 @@ class ComponentReference(object):
             try:
                 class_ref = getattr(module, class_name)
             except AttributeError:
-                log("Class path '%s' is invalid, please check your epoxy YAML cfg" % self.class_path)
+                log("Class path '%s' is invalid, check your epoxy config" % self.class_path)
                 raise
             self._instance = class_ref.from_dependencies(**construction_kwargs)
 

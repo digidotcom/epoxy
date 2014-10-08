@@ -126,7 +126,7 @@ class TestDependencyGraphResolution(unittest.TestCase):
             self.mgr.launch_subgraph(configuration, 'd:main')
         last_logged_msg = self.log.call_args_list[0][0][0]
         self.assertEqual(last_logged_msg,
-                         "Class path '%s' is invalid, please check your epoxy YAML cfg" % invalid_comp)
+                         "Class path '%s' is invalid, check your epoxy config" % invalid_comp)
 
     def test_missing_component(self):
         configuration = self.loader.load_configuration()
