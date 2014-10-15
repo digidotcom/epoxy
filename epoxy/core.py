@@ -66,7 +66,11 @@ class ComponentReference(object):
             construction_kwargs.update(self.settings)
             module_path, class_name = self.class_path.split(':', 1)
             module = load_module(module_path)
-            class_ref = getattr(module, class_name)
+            try:
+                class_ref = getattr(module, class_name)
+            except AttributeError:
+                log("Class path '%s' is invalid, check your epoxy config" % self.class_path)
+                raise
             self._instance = class_ref.from_dependencies(**construction_kwargs)
 
         return self._instance
@@ -270,7 +274,11 @@ class ComponentManager(Component):
 
         entry_component = components[entry_component]
         self.components.update(components)
-        return getattr(entry_component, entry_method)(**kwargs)
+        try:
+            return getattr(entry_component, entry_method)(**kwargs)
+        except AttributeError:
+            log("Bad entry point '%s'" % entry_point)
+            raise
 
     def launch_configuration(self, data, debug=0):
         """Given a configuration, validate and launch based on data
@@ -316,7 +324,11 @@ class ComponentManager(Component):
         if entry_point is not None:
             entry_component_name, entry_method = entry_point.split(':', 1)
             entry_component = self.components[entry_component_name]
-            entry_point_method = getattr(entry_component, entry_method)
+            try:
+                entry_point_method = getattr(entry_component, entry_method)
+            except AttributeError:
+                log("Bad entry point '%s'" % entry_point)
+                raise
 
             # call the entry point method with no arguments
             entry_point_method()

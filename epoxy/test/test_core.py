@@ -8,9 +8,14 @@
 from epoxy.component import Component, Dependency
 from epoxy.configuration import YamlConfigurationLoader
 from epoxy.core import ComponentManager
+from epoxy import core as epoxy_core
 from epoxy.settings import StringSetting
 import os
 import unittest
+import mock
+
+VALID_TEST_YAML = os.path.join(os.path.dirname(__file__), "test_valid.yaml")
+INVALID_TEST_YAML = os.path.join(os.path.dirname(__file__), "test_invalid.yaml")
 
 
 class TestComponent(Component):
@@ -35,11 +40,15 @@ class TestComponent(Component):
 
 class TestDependencyGraphResolution(unittest.TestCase):
 
+    def setUp(self):
+        self.mgr = ComponentManager()
+        self.loader = YamlConfigurationLoader(VALID_TEST_YAML)
+        self.invalid_loader = YamlConfigurationLoader(INVALID_TEST_YAML)
+        self.log = mock.Mock()
+        epoxy_core.log = self.log
+
     def test_graph_ordering(self):
-        mgr = ComponentManager()
-        loader = YamlConfigurationLoader(
-            os.path.join(os.path.dirname(__file__), "test.yml"))
-        graph = mgr.build_component_graph(loader.load_configuration())
+        graph = self.mgr.build_component_graph(self.loader.load_configuration())
         ordering = graph.get_ordering()
         o = [x.name for x in ordering]
         self.assertEqual(len(ordering), 5)  # our 4 plus component_manager
@@ -48,30 +57,24 @@ class TestDependencyGraphResolution(unittest.TestCase):
         self.assert_(o.index("d") > o.index("c"))
 
     def test_graph_construction(self):
-        mgr = ComponentManager()
-        loader = YamlConfigurationLoader(
-            os.path.join(os.path.dirname(__file__), "test.yml"))
-        mgr.launch_configuration(loader.load_configuration())
-        a = mgr.components["a"]
-        b = mgr.components["b"]
-        c = mgr.components["c"]
-        d = mgr.components["d"]
+        self.mgr.launch_configuration(self.loader.load_configuration())
+        a = self.mgr.components["a"]
+        b = self.mgr.components["b"]
+        c = self.mgr.components["c"]
+        d = self.mgr.components["d"]
         self.assertEqual(a.previous, None)
         self.assertEqual(b.previous, a)
         self.assertEqual(c.previous, a)
         self.assertEqual(d.previous, c)
 
     def test_subgraph_construction(self):
-        mgr = ComponentManager()
-        loader = YamlConfigurationLoader(
-            os.path.join(os.path.dirname(__file__), "test.yml"))
-        mgr.launch_subgraph(loader.load_configuration(), 'd:main')
+        self.mgr.launch_subgraph(self.loader.load_configuration(), 'd:main')
 
-        a = mgr.components["a"]
+        a = self.mgr.components["a"]
         with self.assertRaises(KeyError):
-            mgr.components["b"]
-        c = mgr.components["c"]
-        d = mgr.components["d"]
+            self.mgr.components["b"]
+        c = self.mgr.components["c"]
+        d = self.mgr.components["d"]
 
         self.assertEqual(a.previous, None)
         self.assertEqual(c.previous, a)
@@ -81,21 +84,31 @@ class TestDependencyGraphResolution(unittest.TestCase):
         self.assertFalse(c.is_main)
         self.assertTrue(d.is_main)
 
+    def test_subgraph_bad_entry_point(self):
+        with self.assertRaises(AttributeError):
+            self.mgr.launch_subgraph(self.loader.load_configuration(), 'd:fake')
+        last_log_message = self.log.call_args_list[0][0][0]
+        self.assertEqual(last_log_message, "Bad entry point 'd:fake'")
+
+    def test_bad_entry_point(self):
+        cfg = self.invalid_loader.load_configuration()
+        with self.assertRaises(AttributeError):
+            self.mgr.launch_configuration(cfg)
+        last_log_message = self.log.call_args_list[0][0][0]
+        self.assertEqual(last_log_message, "Bad entry point 'a:fake_method'")
+
     def test_entry_point(self):
-        mgr = ComponentManager()
-        loader = YamlConfigurationLoader(
-            os.path.join(os.path.dirname(__file__), "test.yml"))
-        configuration = loader.load_configuration()
+        configuration = self.loader.load_configuration()
 
         # Add entry-point to configuration
         configuration['entry-point'] = 'd:main'
 
-        mgr.launch_configuration(configuration)
+        self.mgr.launch_configuration(configuration)
 
-        a = mgr.components["a"]
-        b = mgr.components["b"]
-        c = mgr.components["c"]
-        d = mgr.components["d"]
+        a = self.mgr.components["a"]
+        b = self.mgr.components["b"]
+        c = self.mgr.components["c"]
+        d = self.mgr.components["d"]
 
         self.assertFalse(a.is_main)
         self.assertFalse(b.is_main)
@@ -103,53 +116,44 @@ class TestDependencyGraphResolution(unittest.TestCase):
         self.assertTrue(d.is_main)
 
     def test_invalid_class(self):
-        mgr = ComponentManager()
-        loader = YamlConfigurationLoader(
-            os.path.join(os.path.dirname(__file__), "test.yml"))
-        configuration = loader.load_configuration()
+        configuration = self.loader.load_configuration()
 
         # Change class to invalid component
-        configuration['components']['a']['class'] = \
-            'epoxy.test.test_core:InvalidComponent'
+        invalid_comp = 'epoxy.test.test_core:InvalidComponent'
+        configuration['components']['a']['class'] = invalid_comp
 
         with self.assertRaises(AttributeError):
-            mgr.launch_subgraph(configuration, 'd:main')
+            self.mgr.launch_subgraph(configuration, 'd:main')
+        last_logged_msg = self.log.call_args_list[0][0][0]
+        self.assertEqual(last_logged_msg,
+                         "Class path '%s' is invalid, check your epoxy config" % invalid_comp)
 
     def test_missing_component(self):
-        mgr = ComponentManager()
-        loader = YamlConfigurationLoader(
-            os.path.join(os.path.dirname(__file__), "test.yml"))
-        configuration = loader.load_configuration()
+        configuration = self.loader.load_configuration()
 
         # Delete required component
         del configuration['components']['a']
 
         with self.assertRaises(ValueError):
-            mgr.launch_subgraph(configuration, 'd:main')
+            self.mgr.launch_subgraph(configuration, 'd:main')
 
     def test_cycle_detection(self):
-        mgr = ComponentManager()
-        loader = YamlConfigurationLoader(
-            os.path.join(os.path.dirname(__file__), "test.yml"))
-        configuration = loader.load_configuration()
+        configuration = self.loader.load_configuration()
 
         # Change class to invalid component
         configuration['components']['a']['dependencies'] = {'previous': 'd'}
 
         with self.assertRaises(ValueError):
-            mgr.launch_configuration(configuration)
+            self.mgr.launch_configuration(configuration)
 
     def test_subgraph_cycle_detection(self):
-        mgr = ComponentManager()
-        loader = YamlConfigurationLoader(
-            os.path.join(os.path.dirname(__file__), "test.yml"))
-        configuration = loader.load_configuration()
+        configuration = self.loader.load_configuration()
 
         # Change class to invalid component
         configuration['components']['a']['dependencies'] = {'previous': 'd'}
 
         with self.assertRaises(ValueError):
-            mgr.launch_subgraph(configuration, 'd:main')
+            self.mgr.launch_subgraph(configuration, 'd:main')
 
 
 if __name__ == '__main__':
