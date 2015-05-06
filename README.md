@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/Etherios/epoxy.svg?branch=master)](https://travis-ci.org/Etherios/epoxy)
+[![Build Status](https://travis-ci.org/digidotcom/epoxy.svg?branch=master)](https://travis-ci.org/Etherios/epoxy)
 
 Epoxy
 =====
@@ -6,7 +6,7 @@ Epoxy
 Introduction
 ------------
 
-Epoxy is an inversion of control framework for Python applications
+Epoxy is an dependency injection framework for Python applications
 packaged with a set of adapters that can be used with a number of
 existing technologies.  Epoxy allows you to clearly separate out the
 concern of mapping dependencies to components from defining those
@@ -27,28 +27,30 @@ An Example
 
 Here's an example of an epoxy component:
 
-    from epoxy.component import Component, Dependency
+```python
+from epoxy.component import Component, Dependency
 
-    class PrinterComponent(Component):
-    
-        prefix = StringSetting(required=False, default="PRINTING")
+class PrinterComponent(Component):
 
-        def print(self, stuff):
-            print ("[%s] %%s" % self.prefix) % stuff
+    prefix = StringSetting(required=False, default="PRINTING")
 
-        def start(self):
-            print self.print("Warming up printer")
+    def write(self, stuff):
+        print ("[%s] %%s" % self.prefix) % stuff
+
+    def start(self):
+        print self.write("Warming up printer")
 
 
-    class ScreenRenderer(Component):
+class ScreenRenderer(Component):
 
-        printer = Dependency()
+    printer = Dependency()
 
-        def render_screen(self):
-            self.printer.print("My Stuff")
+    def render_screen(self):
+        self.printer.write("My Stuff")
 
-        def start(self):
-            self.printer.print("Screen Renderer Initialized")
+    def start(self):
+        self.printer.write("Screen Renderer Initialized")
+```
 
 In this example, ScreenRenderer does not need to know the precise
 printer which will be used as a dependency at runtime, it just needs
@@ -58,30 +60,34 @@ as with much in python we just use duck typing).
 To wire these components up at runtime, we would write a yaml file
 that would have something like this:
 
-    components:
-      printer:
-        class: my.module:PrinterComponent
-        settings:
-          prefix: PREFIX
+```yaml
+components:
+  printer:
+    class: my.module:PrinterComponent
+    settings:
+      prefix: PREFIX
 
-      screen_renderer:
-        class: my.module:ScreenRenderer
-        dependencies:
-          printer: printer
+  screen_renderer:
+    class: my.module:ScreenRenderer
+    dependencies:
+      printer: printer
 
-    entry-point:
-      screen_renderer:render_screen
+entry-point:
+  screen_renderer:render_screen
+```
 
 Finally, to load in our configuration and run the application, we
 would write something like the following:
 
-    from epoxy.configuration import YamlConfigurationLoader
-    from epoxy.core import ComponentManager
+```python
+from epoxy.configuration import YamlConfigurationLoader
+from epoxy.core import ComponentManager
 
-    loader = YamlConfigurationLoader("myapp.yml")
-    config = loader.load_configuration()
-    component_mgr = ComponentManager()
-    component_mgr.launch_configuration(config)
+loader = YamlConfigurationLoader("myapp.yml")
+config = loader.load_configuration()
+component_mgr = ComponentManager()
+component_mgr.launch_configuration(config)
+```
 
 This would run our entry point and print the following to the screen:
 
@@ -103,9 +109,11 @@ to play nicely:
     
     For instance, instantiating our previous object graph would look
     like the following:
-    
-        printer = PrinterComponent.from_dependencies(prefix="FROM_DEPS")
-        renderer = ScreenRenderer.from_dependencies(printer=printer)
+
+    ```python
+    printer = PrinterComponent.from_dependencies(prefix="FROM_DEPS")
+    renderer = ScreenRenderer.from_dependencies(printer=printer)
+    ```
 
     When ``__init__`` is executed it is guaranteed that all dependencies
     will be present and initialized (but not started).
