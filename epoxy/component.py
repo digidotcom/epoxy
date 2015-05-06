@@ -134,7 +134,7 @@ class Component(object):
                 if dependency.required:
                     raise ValueError(
                         "'%s' is a required dependency of '%s' but was not "
-                        "specified when from_dependncies"
+                        "specified when from_dependencies"
                         " was called" % (key, cls.__name__))
                 dep_inst = dependency.bound_instance(dependency.default)
             else:
