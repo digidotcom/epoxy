@@ -1,7 +1,11 @@
-[![Build Status](https://travis-ci.org/digidotcom/epoxy.svg?branch=master)](https://travis-ci.org/Etherios/epoxy)
-
 Epoxy
 =====
+
+[![Build Status](https://img.shields.io/travis/digidotcom/epoxy.svg)](https://travis-ci.org/digidotcom/epoxy)
+[![Coverage Status](https://img.shields.io/coveralls/digidotcom/epoxy.svg)](https://coveralls.io/r/digidotcom/epoxy)
+[![Code Climate](https://img.shields.io/codeclimate/github/digidotcom/epoxy.svg)](https://codeclimate.com/github/digidotcom/epoxy)
+[![Latest Version](https://img.shields.io/pypi/v/epoxy.svg)](https://pypi.python.org/pypi/epoxy/)
+[![License](https://img.shields.io/badge/license-MPL%202.0-blue.svg)](https://github.com/digidotcom/epoxy/blob/master/LICENSE)
 
 Introduction
 ------------
