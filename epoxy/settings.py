@@ -8,6 +8,7 @@
 """Abstract and Concrete settings classes that may be used in applications"""
 import os
 
+NO_VALUE = object()
 
 class BaseSetting(object):
     """Base class for all settings"""
@@ -17,10 +18,13 @@ class BaseSetting(object):
         self.required = required
         self.default = default
         self.help = help
-        self.value = default
+        self.value = NO_VALUE
 
     def get_value(self):
-        return self.value
+        if self.value is not NO_VALUE:
+            return self.value
+        else:
+            return self.default
 
     def set_value(self, value):
         self.value = value
@@ -108,8 +112,22 @@ class DictionarySetting(BaseSetting):
 
 
 class EnvironmentSetting(BaseSetting):
+    """ Encapsulate a setting that reads an operating system environment variable
+
+    An environment setting will when get_value is called check the operating
+    system for an environment variable with name `env_variable_name`.  The
+    order of precedence for this setting is as follows:
+
+    If OS contains environment variable with the appropriate name, use that
+    If OS env variable is not set, use whatever value has been set with `set_value`
+    (typically from the yaml configuration)
+    If `set_value` has not been called, use the default value
+    """
 
     def __init__(self, required=False, default=None, help="", env_variable_name=""):
+        """
+        :param env_variable_name: This is the name of the OS environment variable to check
+        """
         BaseSetting.__init__(self, required, default, help)
         self.env_variable_name = env_variable_name
 
@@ -118,8 +136,10 @@ class EnvironmentSetting(BaseSetting):
         env_value = os.getenv(self.env_variable_name, None)
         if env_value is not None:
             return env_value
-        else:
+        elif self.value is not NO_VALUE:
             return self.value
+        else:
+            return self.default
 
     def encode(self, value):
         return str(value)
