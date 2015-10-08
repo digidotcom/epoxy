@@ -6,36 +6,24 @@
 # Etherios, Inc. is a Division of Digi International.
 
 """Abstract and Concrete settings classes that may be used in applications"""
-
-
-class SettingInstance(object):
-    """Encapsulate a reference to some setting"""
-
-    def __init__(self, setting_type, initial_value):
-        self.type = setting_type
-        self._value = initial_value
-
-    def get_value(self):
-        return self._value
-
-    def set_value(self, obj, value):
-        self._value = value
+import os
 
 
 class BaseSetting(object):
     """Base class for all settings"""
-
-    instance_type = SettingInstance
 
     def __init__(self, required=False, default=None, help=""):  # @ReservedAssignment
         self.name = None
         self.required = required
         self.default = default
         self.help = help
+        self.value = default
 
-    @classmethod
-    def bound_instance(cls, value):
-        return cls.instance_type(cls, value)
+    def get_value(self):
+        return self.value
+
+    def set_value(self, value):
+        self.value = value
 
     def encode(self, value):
         """
@@ -117,3 +105,24 @@ class DictionarySetting(BaseSetting):
 
     def decode(self, value):
         return value
+
+
+class EnvironmentSetting(BaseSetting):
+
+    def __init__(self, required=False, default=None, help="", env_variable_name=""):
+        BaseSetting.__init__(self, required, default, help)
+        self.env_variable_name = env_variable_name
+
+    def get_value(self):
+        # Use actual environment variable if available, otherwise use the set value
+        env_value = os.getenv(self.env_variable_name, None)
+        if env_value is not None:
+            return env_value
+        else:
+            return self.value
+
+    def encode(self, value):
+        return str(value)
+
+    def decode(self, value):
+        return str(value)

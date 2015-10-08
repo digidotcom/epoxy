@@ -155,6 +155,18 @@ class TestDependencyGraphResolution(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.mgr.launch_subgraph(configuration, 'd:main')
 
+    def test_settings(self):
+        config = self.loader.load_configuration()
+        self.mgr.launch_configuration(config)
+        a = self.mgr.components["a"]
+        b = self.mgr.components["b"]
+        c = self.mgr.components["c"]
+        d = self.mgr.components["d"]
+        self.assertEqual(a.name, 'alfred')
+        self.assertEqual(b.name, 'barry')
+        self.assertEqual(c.name, 'charles')
+        self.assertEqual(d.name, 'daniel')
+
 
 if __name__ == '__main__':
     unittest.main()
