@@ -5,7 +5,7 @@
 # Copyright (c) 2014 Etherios, Inc. All rights reserved.
 # Etherios, Inc. is a Division of Digi International.
 
-from epoxy.settings import BaseSetting, SettingInstance, ListSetting
+from epoxy.settings import BaseSetting, ListSetting
 import six
 
 
@@ -148,16 +148,15 @@ class Component(object):
                 if setting.required:
                     raise ValueError("'%s' is a required setting but was "
                                      "not specified" % key)
-                dep_inst = setting.bound_instance(setting.default)
             else:
                 match = settings_matches[key]
-                dep_inst = setting.bound_instance(setting.decode(match))
-            dependencies_settings_lookup[key] = dep_inst
+                setting.set_value(setting.decode(match))
+            dependencies_settings_lookup[key] = setting
 
         # now call __init__ to finish construction
         instance._dependencies_settings_lookup = dependencies_settings_lookup
         for attr, obj in six.iteritems(dependencies_settings_lookup):
-            if isinstance(obj, SettingInstance):
+            if isinstance(obj, BaseSetting):
                 obj = obj.get_value()
             setattr(instance, attr, obj)
         instance._launched = False

@@ -6,36 +6,28 @@
 # Etherios, Inc. is a Division of Digi International.
 
 """Abstract and Concrete settings classes that may be used in applications"""
+import os
 
-
-class SettingInstance(object):
-    """Encapsulate a reference to some setting"""
-
-    def __init__(self, setting_type, initial_value):
-        self.type = setting_type
-        self._value = initial_value
-
-    def get_value(self):
-        return self._value
-
-    def set_value(self, obj, value):
-        self._value = value
-
+NO_VALUE = object()
 
 class BaseSetting(object):
     """Base class for all settings"""
-
-    instance_type = SettingInstance
 
     def __init__(self, required=False, default=None, help=""):  # @ReservedAssignment
         self.name = None
         self.required = required
         self.default = default
         self.help = help
+        self.value = NO_VALUE
 
-    @classmethod
-    def bound_instance(cls, value):
-        return cls.instance_type(cls, value)
+    def get_value(self):
+        if self.value is not NO_VALUE:
+            return self.value
+        else:
+            return self.default
+
+    def set_value(self, value):
+        self.value = value
 
     def encode(self, value):
         """
@@ -117,3 +109,40 @@ class DictionarySetting(BaseSetting):
 
     def decode(self, value):
         return value
+
+
+class EnvironmentSetting(BaseSetting):
+    """ Encapsulate a setting that reads an operating system environment variable
+
+    An environment setting will when get_value is called check the operating
+    system for an environment variable with name `env_variable_name`.  The
+    order of precedence for this setting is as follows:
+
+    If OS contains environment variable with the appropriate name, use that
+    If OS env variable is not set, use whatever value has been set with `set_value`
+    (typically from the yaml configuration)
+    If `set_value` has not been called, use the default value
+    """
+
+    def __init__(self, required=False, default=None, help="", env_variable_name=""):
+        """
+        :param env_variable_name: This is the name of the OS environment variable to check
+        """
+        BaseSetting.__init__(self, required, default, help)
+        self.env_variable_name = env_variable_name
+
+    def get_value(self):
+        # Use actual environment variable if available, otherwise use the set value
+        env_value = os.getenv(self.env_variable_name, None)
+        if env_value is not None:
+            return env_value
+        elif self.value is not NO_VALUE:
+            return self.value
+        else:
+            return self.default
+
+    def encode(self, value):
+        return str(value)
+
+    def decode(self, value):
+        return str(value)

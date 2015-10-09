@@ -7,8 +7,10 @@
 
 from epoxy.component import Component
 from epoxy.settings import IntegerSetting, StringSetting, BooleanSetting, \
-    FloatSetting, ListSetting, DictionarySetting, BaseSetting, SettingInstance
+    FloatSetting, ListSetting, DictionarySetting, BaseSetting, EnvironmentSetting
 import unittest
+import os
+import mock
 
 
 class ExampleComponent(Component):
@@ -119,6 +121,10 @@ class TestSettings(unittest.TestCase):
             DictionarySetting().encode({'1': '2'}),
             "{'1': '2'}"
         )
+        self.assertEqual(
+            EnvironmentSetting(env_variable_name='test').encode('12345'),
+            '12345'
+        )
 
     def test_base_setting(self):
         with self.assertRaises(NotImplementedError):
@@ -127,10 +133,44 @@ class TestSettings(unittest.TestCase):
             BaseSetting().decode('12345')
 
     def test_setting_instance_set(self):
-        si = SettingInstance(StringSetting, 'abcde')
+        si = BaseSetting(default='abcde')
         self.assertEqual(si.get_value(), 'abcde')
-        si.set_value(object(), '12345')
+        si.set_value('12345')
         self.assertEqual(si.get_value(), '12345')
+
+    def test_env_variable_str_setting_present(self):
+        with mock.patch.object(os, 'getenv', side_effect=('test string',)):
+            class ExampleEnvironmentComponent(Component):
+                env_setting = EnvironmentSetting(env_variable_name='ENV_VARIABLE')
+
+            svc = ExampleEnvironmentComponent.from_dependencies()
+            self.assertEqual('test string', svc.env_setting)
+
+    def test_env_variable_str_setting_not_present(self):
+        with mock.patch.object(os, 'getenv', side_effect=(None,)):
+            class ExampleEnvironmentComponent(Component):
+                env_setting = EnvironmentSetting(default="default", env_variable_name='ENV_VARIABLE')
+
+            svc = ExampleEnvironmentComponent.from_dependencies()
+            self.assertEqual('default', svc.env_setting)
+
+    def test_env_variable_str_setting_not_present_set_value(self):
+        with mock.patch.object(os, 'getenv', side_effect=(None,)):
+            class ExampleEnvironmentComponent(Component):
+                env_setting = EnvironmentSetting(default="default", env_variable_name='ENV_VARIABLE')
+
+            svc = ExampleEnvironmentComponent.from_dependencies(env_setting='asdf')
+            self.assertEqual('asdf', svc.env_setting)
+
+    def test_env_variable_str_setting_present_set_value(self):
+        with mock.patch.object(os, 'getenv', side_effect=('test string',)):
+            class ExampleEnvironmentComponent(Component):
+                env_setting = EnvironmentSetting(default="default", env_variable_name='ENV_VARIABLE')
+
+            svc = ExampleEnvironmentComponent.from_dependencies(env_setting='asdf')
+            self.assertEqual('test string', svc.env_setting)
+
+
 
 if __name__ == '__main__':
     unittest.main()
